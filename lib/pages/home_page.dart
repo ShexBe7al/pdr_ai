@@ -53,16 +53,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _scanImage() async {
-    debugprint("SCAN CLICKED");
+    debugPrint("SCAN CLICKED");
 
     if (_image == null) {
-    debugprint("IMAGE IS NULL");
+    debugPrint("IMAGE IS NULL");
     return;
   }
-    debugprint("IMAGE FOUND");
+    debugPrint("IMAGE FOUND");
     final result = await ScannerAI.scanImage(_image!);
 
-    debugprint("RESULT = ${result.length}");
+    debugPrint("RESULT = ${result.length}");
     setState(() {
       _points = result;
     });
