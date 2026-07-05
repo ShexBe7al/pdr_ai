@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'features/splash/splash_page.dart';
 import 'pages/home_page.dart';
 
 void main() {
@@ -17,7 +18,12 @@ class PdrAI extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
-      home: const HomePage(),
+
+      home: const SplashPage(),
+
+      routes: {
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }
