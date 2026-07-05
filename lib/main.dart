@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'features/splash/splash_page.dart';
-import 'pages/home_page.dart';
+import 'features/home/home_page.dart';
 
 void main() {
   runApp(const PdrAI());
