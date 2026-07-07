@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gallery/gallery_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -22,110 +23,152 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF111827),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.blue,
-                  width: 1.5,
+              Container(
+                height: 220,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.blue,
+                    width: 1.5,
+                  ),
                 ),
-              ),
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
 
-                  const Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
                     children: [
 
-                      Icon(
-                        Icons.camera_alt,
-                        color: Colors.blue,
-                        size: 30,
+                      const Row(
+                        children: [
+
+                          Icon(
+                            Icons.camera_alt,
+                            color: Colors.blue,
+                            size: 28,
+                          ),
+
+                          SizedBox(width: 10),
+
+                          Text(
+                            "LIVE SCAN",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
 
-                      SizedBox(width: 10),
+                      const SizedBox(height: 20),
 
-                      Text(
-                        "LIVE SCAN",
+                      const Text(
+                        "Scan your vehicle using AI",
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          fontSize: 16,
                         ),
                       ),
+
+                      const Spacer(),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+
+                        child: ElevatedButton(
+                          onPressed: () {},
+
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+
+                          child: const Text(
+                            "START SCAN",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
                     ],
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: 20),
+              const SizedBox(height: 25),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
+                childAspectRatio: 1.15,
+                children: [
 
-                  const Text(
-                    "Scan your vehicle using AI",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                  _menuCard(
+                    context,
+                    Icons.photo_library,
+                    "Gallery",
+                    Colors.blue,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GalleryPage(),
+                        ),
+                      );
+                    },
                   ),
 
-                  const SizedBox(height: 25),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      child: const Text("START SCAN"),
-                    ),
+                  _menuCard(
+                    context,
+                    Icons.description,
+                    "Reports",
+                    Colors.green,
+                    () {},
                   ),
+
+                  _menuCard(
+                    context,
+                    Icons.history,
+                    "History",
+                    Colors.orange,
+                    () {},
+                  ),
+
+                  _menuCard(
+                    context,
+                    Icons.settings,
+                    "Settings",
+                    Colors.purple,
+                    () {},
+                  ),
+
                 ],
               ),
-            ),
 
-            const SizedBox(height: 25),
+              const SizedBox(height: 20),
 
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              childAspectRatio: 1.15,
-              children: [
-
-                _menuCard(
-                  Icons.photo_library,
-                  "Gallery",
-                  Colors.blue,
-                ),
-
-                _menuCard(
-                  Icons.description,
-                  "Reports",
-                  Colors.green,
-                ),
-
-                _menuCard(
-                  Icons.history,
-                  "History",
-                  Colors.orange,
-                ),
-
-                _menuCard(
-                  Icons.settings,
-                  "Settings",
-                  Colors.purple,
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
 
@@ -135,6 +178,7 @@ class HomePage extends StatelessWidget {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.white70,
         currentIndex: 0,
+
         items: const [
 
           BottomNavigationBarItem(
@@ -150,21 +194,24 @@ class HomePage extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.description),
             label: "Reports",
-            ),
+          ),
 
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: "Settings",
           ),
+
         ],
       ),
     );
   }
 
   Widget _menuCard(
+    BuildContext context,
     IconData icon,
     String title,
     Color color,
+    VoidCallback onTap,
   ) {
     return Card(
       color: const Color(0xFF111827),
@@ -173,7 +220,7 @@ class HomePage extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {},
+        onTap: onTap,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -195,6 +242,7 @@ class HomePage extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
             ],
           ),
         ),
