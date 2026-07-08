@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../camera/camera_page.dart';
 import '../gallery/gallery_page.dart';
 import '../reports/report_page.dart';
 
@@ -31,8 +33,8 @@ class HomePage extends StatelessWidget {
             children: [
 
               Container(
-                height: 220,
                 width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(20),
@@ -41,80 +43,81 @@ class HomePage extends StatelessWidget {
                     width: 1.5,
                   ),
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+                    const Row(
+                      children: [
 
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
-                    children: [
-
-                      const Row(
-                        children: [
-
-                          Icon(
-                            Icons.camera_alt,
-                            color: Colors.blue,
-                            size: 28,
-                          ),
-
-                          SizedBox(width: 10),
-
-                          Text(
-                            "LIVE SCAN",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      const Text(
-                        "Scan your vehicle using AI",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
+                        Icon(
+                          Icons.camera_alt,
+                          color: Colors.blue,
+                          size: 30,
                         ),
-                      ),
 
-                      const Spacer(),
+                        SizedBox(width: 12),
 
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-
-                        child: ElevatedButton(
-                          onPressed: () {},
-
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-
-                          child: const Text(
-                            "START SCAN",
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Text(
+                          "LIVE SCAN",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
 
-                    ],
-                  ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    const Text(
+                      "Scan your vehicle with AI to detect dents instantly.",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CameraPage(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text(
+                          "START SCAN",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  ],
                 ),
               ),
 
               const SizedBox(height: 25),
+
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -122,7 +125,20 @@ class HomePage extends StatelessWidget {
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
                 childAspectRatio: 1.15,
-                children: [
+                children: [_menuCard(
+                    context,
+                    Icons.camera_alt,
+                    "Scan",
+                    Colors.red,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CameraPage(),
+                        ),
+                      );
+                    },
+                  ),
 
                   _menuCard(
                     context,
@@ -139,27 +155,35 @@ class HomePage extends StatelessWidget {
                     },
                   ),
 
-                 _menuCard(
-  context,
-  Icons.description,
-  "Reports",
-  Colors.green,
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ReportPage(),
-      ),
-    );
-  },
-),
+                  _menuCard(
+                    context,
+                    Icons.description,
+                    "Reports",
+                    Colors.green,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ReportPage(),
+                        ),
+                      );
+                    },
+                  ),
 
                   _menuCard(
                     context,
                     Icons.history,
                     "History",
                     Colors.orange,
-                    () {},
+                    () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "History Page Coming Soon",
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                   _menuCard(
@@ -167,7 +191,15 @@ class HomePage extends StatelessWidget {
                     Icons.settings,
                     "Settings",
                     Colors.purple,
-                    () {},
+                    () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Settings Coming Soon",
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                 ],
@@ -186,34 +218,44 @@ class HomePage extends StatelessWidget {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.white70,
         currentIndex: 0,
-
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CameraPage(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ReportPage(),
+              ),
+            );
+          }
+        },
         items: const [
-
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: "Home",
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt),
             label: "Scan",
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.description),
             label: "Reports",
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: "Settings",
           ),
-
         ],
       ),
     );
   }
-
   Widget _menuCard(
     BuildContext context,
     IconData icon,
@@ -223,6 +265,7 @@ class HomePage extends StatelessWidget {
   ) {
     return Card(
       color: const Color(0xFF111827),
+      elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
       ),
@@ -230,28 +273,32 @@ class HomePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
 
-              Icon(
-                icon,
-                color: color,
-                size: 42,
-              ),
-
-              const SizedBox(height: 12),
-
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                Icon(
+                  icon,
+                  color: color,
+                  size: 42,
                 ),
-              ),
 
-            ],
+                const SizedBox(height: 12),
+
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+              ],
+            ),
           ),
         ),
       ),
