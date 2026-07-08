@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gallery/gallery_page.dart';
+import '../reports/report_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -138,13 +139,20 @@ class HomePage extends StatelessWidget {
                     },
                   ),
 
-                  _menuCard(
-                    context,
-                    Icons.description,
-                    "Reports",
-                    Colors.green,
-                    () {},
-                  ),
+                 _menuCard(
+  context,
+  Icons.description,
+  "Reports",
+  Colors.green,
+  () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ReportPage(),
+      ),
+    );
+  },
+),
 
                   _menuCard(
                     context,
