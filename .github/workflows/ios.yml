@@ -5,29 +5,35 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.5'
+          flutter-version: "3.32.5"
 
-      - run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-      - run: flutter build ios --release --no-codesign
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
 
       - name: Create Payload
         run: |
-          mkdir Payload
+          mkdir -p Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
 
       - name: Create IPA
         run: |
-          zip -r Runner.ipa Payload
+          cd Payload
+          zip -r ../Runner.ipa .
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: Runner.ipa
