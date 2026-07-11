@@ -1,17 +1,23 @@
-# pdr_ai
+# PDR AI v1.0
 
-A new Flutter project.
+Flutter application for AI-assisted vehicle dent detection.
 
-## Getting Started
+## Run
 
-This project is a starting point for a Flutter application.
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+For a private Roboflow key, run with:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter run --dart-define=ROBOFLOW_API_KEY=YOUR_KEY --dart-define=ROBOFLOW_MODEL_ID=YOUR_MODEL
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## iOS
+An IPA must be built and signed on macOS with Xcode. Camera and photo permissions are included in `ios/Runner/Info.plist`.
+
+## Important
+AI output is an estimate and should be verified by a qualified PDR technician.
