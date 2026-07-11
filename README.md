@@ -1,8 +1,8 @@
 # PDR AI v1.0
 
-Flutter application for AI-assisted vehicle dent detection.
+Flutter mobile prototype for vehicle dent detection with Roboflow.
 
-## Run
+## First run
 
 ```bash
 flutter clean
@@ -10,14 +10,26 @@ flutter pub get
 flutter run
 ```
 
-For a private Roboflow key, run with:
+On first launch, open **Settings** and paste the Roboflow API key. The default model ID is already filled in.
 
-```bash
-flutter run --dart-define=ROBOFLOW_API_KEY=YOUR_KEY --dart-define=ROBOFLOW_MODEL_ID=YOUR_MODEL
-```
+## Main features
 
-## iOS
-An IPA must be built and signed on macOS with Xcode. Camera and photo permissions are included in `ios/Runner/Info.plist`.
+- Start Scan opens the camera directly
+- Capture and AI scan in one flow
+- Gallery image scanning
+- Correctly scaled dent bounding boxes
+- Dent count, confidence, and inference time
+- Scan history
+- PDF report export and sharing
+- Android APK and unsigned iOS IPA workflows
 
-## Important
-AI output is an estimate and should be verified by a qualified PDR technician.
+## GitHub Actions
+
+- `Flutter CI`: analyzes the project, builds Android APK, and creates an unsigned IPA.
+- `Build iOS IPA`: manual iOS-only workflow.
+
+The iOS artifact is named `pdr-ai-unsigned-ipa`. It must be signed with an Apple ID/certificate using a tool such as Sideloadly before installation.
+
+## Security
+
+Do not commit the Roboflow API key to GitHub. It is stored locally on the device through SharedPreferences.
