@@ -1,0 +1,20 @@
+PDR AI v1.0.4 — Final reviewed source
+
+چارەسەرکراوەکان:
+- هەموو import ـە کۆنەکانی package:camera/camera.dart لابراون.
+- Start Scan بە image_picker کامێرای پاشەوە دەکاتەوە و وێنەکە یەکسەر بۆ AI دەنێرێت.
+- Gallery بە image_picker کار دەکات.
+- iOS Camera و Photos permissions لە Info.plist دانراون.
+- Podfile و GeneratedPluginRegistrant دروستن.
+- GitHub Actions هەموو dependencies دابەزێنێت، iOS build دەکات و IPA دروست دەکات.
+- Bounding boxes، Dent Count و Confidence ڕێکخراون.
+
+گرنگ:
+لە GitHub ـدا هەموو فایلە کۆنەکان Replace بکە. بە تایبەتی:
+lib/features/camera/camera_page.dart
+pubspec.yaml
+.github/workflows/ios.yml
+
+Workflow:
+Actions > Build iOS IPA > Run workflow
+Artifact: PDR_AI-v1.0.4-unsigned-IPA
