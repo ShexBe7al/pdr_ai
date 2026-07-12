@@ -1,7 +1,7 @@
 name: pdr_ai
 description: PDR AI vehicle dent scanner
 publish_to: "none"
-version: 1.0.1+2
+version: 1.0.3+4
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -12,11 +12,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   image_picker: ^1.1.2
   http: ^1.2.1
-  shared_preferences: ^2.3.2
-  path_provider: ^2.1.4
-  pdf: ^3.11.1
-  share_plus: ^10.0.2
-  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,29 @@
+PDR AI v1.0.3 FINAL REVIEW
+
+Implemented and reviewed:
+- Start Scan opens the rear camera immediately using image_picker.
+- Captured photo is sent to Roboflow AI automatically.
+- Gallery image selection and AI scan flow.
+- iOS Camera and Photos permission descriptions.
+- iOS Podfile and CocoaPods integration for plugin registration.
+- Correct Roboflow model endpoint: pdr-scanner-ai-v2/2.
+- Scale-correct dent bounding boxes.
+- Dent count, average confidence, no-dent state, and errors.
+- Android release INTERNET and CAMERA permissions.
+- GitHub Android and unsigned iOS IPA workflows.
+- Bundle ID: com.hedihadi.pdrai.
+
+Checks completed in this environment:
+- YAML parsing passed.
+- Info.plist parsing passed.
+- AndroidManifest.xml parsing passed.
+- Podfile Ruby syntax passed.
+- Local Dart imports resolve.
+- Dart delimiter/bracket validation passed.
+
+Final proof still required:
+- GitHub Actions compile/build.
+- Installation and Camera/Gallery/AI test on the physical iPhone.
+
+Security:
+- The prototype Roboflow API key is embedded for testing. Rotate it before public/App Store release.
