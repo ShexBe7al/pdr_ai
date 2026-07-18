@@ -164,7 +164,7 @@ class HomePage extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ReportPage(),
+                          builder: (_) => const CameraPage(),
                         ),
                       );
                     },
@@ -230,7 +230,7 @@ class HomePage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const ReportPage(),
+                builder: (_) => const CameraPage(),
               ),
             );
           }

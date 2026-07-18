@@ -67,14 +67,13 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 <key>NSCameraUsageDescription</key>
-<string>This app needs camera access to scan vehicle dents.</string>
+<string>PDR AI needs camera access to scan vehicle dents.</string>
 
 <key>NSPhotoLibraryUsageDescription</key>
-<string>This app needs access to save scan images.</string>
+<string>PDR AI needs photo access to scan vehicle images.</string>
 
 <key>NSPhotoLibraryAddUsageDescription</key>
-<string>This app needs permission to save images.</string>
-
+<string>PDR AI needs permission to save images.</string>
 
 </dict>
 </plist>

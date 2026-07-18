@@ -17,17 +17,17 @@ class _GalleryPageState extends State<GalleryPage> {
 
   File? _image;
 
-  List<Offset> _points = [];
+  ScanResult? _result;
 
   Future<void> _pickImage() async {
-    final XFile? picked = await _picker.pickImage(
+    final picked = await _picker.pickImage(
       source: ImageSource.gallery,
     );
 
     if (picked != null) {
       setState(() {
         _image = File(picked.path);
-        _points.clear();
+        _result = null;
       });
     }
   }
@@ -35,10 +35,13 @@ class _GalleryPageState extends State<GalleryPage> {
   Future<void> _scanImage() async {
     if (_image == null) return;
 
-    final result = await ScannerAI.scanImage(_image!);
+    final result = await ScannerAI.scan(
+      _image!,
+      const String.fromEnvironment("ROBOFLOW_API_KEY"),
+    );
 
     setState(() {
-      _points = result;
+      _result = result;
     });
   }
 
@@ -46,18 +49,15 @@ class _GalleryPageState extends State<GalleryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF050B18),
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text("Gallery"),
         centerTitle: true,
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-
             Expanded(
               child: Center(
                 child: _image == null
@@ -68,32 +68,22 @@ class _GalleryPageState extends State<GalleryPage> {
                           fontSize: 22,
                         ),
                       )
-                    : Stack(
-                        children: [
-
-                          Image.file(_image!),
-
-                          ..._points.map(
-                            (p) => Positioned(
-                              left: p.dx,
-                              top: p.dy,
-                              child: Container(
-                                width: 18,
-                                height: 18,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        ],
-                      ),
+                    : Image.file(_image!),
               ),
             ),
 
-            const SizedBox(height: 20),
+            if (_result != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 15),
+                child: Text(
+                  "Dent Count : ${_result!.dentCount}",
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
 
             SizedBox(
               width: double.infinity,
