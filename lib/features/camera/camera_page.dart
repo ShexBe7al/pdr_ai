@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../ai/scanner_ai.dart';
 import '../reports/report_page.dart';
-import 'camera_service.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -20,63 +19,34 @@ class _CameraPageState extends State<CameraPage> {
     'ROBOFLOW_API_KEY',
   );
 
-  final CameraService _cameraService = CameraService();
+  final ImagePicker _picker = ImagePicker();
 
-  bool _isCameraReady = false;
-  bool _isCapturing = false;
-  bool _isAnalyzing = false;
-
-  String? _cameraError;
   XFile? _capturedImage;
   ScanResult? _scanResult;
+
+  bool _isOpeningCamera = false;
+  bool _isAnalyzing = false;
 
   double _imageWidth = 1;
   double _imageHeight = 1;
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeCamera();
-  }
-
-  Future<void> _initializeCamera() async {
-    if (mounted) {
-      setState(() {
-        _isCameraReady = false;
-        _cameraError = null;
-      });
-    }
-
-    try {
-      await _cameraService.initialize();
-
-      if (!mounted) return;
-
-      setState(() {
-        _isCameraReady = true;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        _cameraError = error.toString();
-      });
-    }
-  }
-
-  Future<void> _capturePhoto() async {
-    if (_isCapturing || !_cameraService.isReady) return;
+  Future<void> _openCamera() async {
+    if (_isOpeningCamera) return;
 
     setState(() {
-      _isCapturing = true;
+      _isOpeningCamera = true;
       _scanResult = null;
     });
 
     try {
-      final image = await _cameraService.capture();
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 95,
+      );
 
       if (image == null) {
-        throw Exception('No image was captured.');
+        return;
       }
 
       await _readImageSize(File(image.path));
@@ -86,14 +56,18 @@ class _CameraPageState extends State<CameraPage> {
       setState(() {
         _capturedImage = image;
       });
+
+      await _analyzeImage();
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage('Capture failed: $error');
+      _showMessage(
+        'Camera failed: $error',
+      );
     } finally {
       if (mounted) {
         setState(() {
-          _isCapturing = false;
+          _isOpeningCamera = false;
         });
       }
     }
@@ -101,6 +75,7 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _readImageSize(File imageFile) async {
     final bytes = await imageFile.readAsBytes();
+
     final codec = await ui.instantiateImageCodec(bytes);
     final frame = await codec.getNextFrame();
 
@@ -112,16 +87,16 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _analyzeImage() async {
-    final capturedImage = _capturedImage;
+    final image = _capturedImage;
 
-    if (capturedImage == null) {
-      _showMessage('Please capture a photo first.');
+    if (image == null) {
+      _showMessage('Please take a photo first.');
       return;
     }
 
     if (_apiKey.isEmpty) {
       _showMessage(
-        'Roboflow API key is missing. Run the app with --dart-define.',
+        'Roboflow API key is missing.',
       );
       return;
     }
@@ -135,7 +110,7 @@ class _CameraPageState extends State<CameraPage> {
 
     try {
       final result = await ScannerAI.scan(
-        File(capturedImage.path),
+        File(image.path),
         _apiKey,
       );
 
@@ -151,7 +126,9 @@ class _CameraPageState extends State<CameraPage> {
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage('AI scan failed: $error');
+      _showMessage(
+        'AI scan failed: $error',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -160,25 +137,27 @@ class _CameraPageState extends State<CameraPage> {
       }
     }
   }
+    void _openReport() {
+    final image = _capturedImage;
+    final result = _scanResult;
 
- void _openReport() {
-  if (_scanResult == null || _capturedImage == null) {
-    _showMessage('Analyze the image first.');
-    return;
-  }
+    if (image == null || result == null) {
+      _showMessage('Analyze the image first.');
+      return;
+    }
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ReportPage(
-        imagePath: _capturedImage!.path,
-        result: _scanResult!,
-        imageWidth: _imageWidth,
-        imageHeight: _imageHeight,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReportPage(
+          imagePath: image.path,
+          result: result,
+          imageWidth: _imageWidth,
+          imageHeight: _imageHeight,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _retakePhoto() {
     setState(() {
@@ -187,6 +166,8 @@ class _CameraPageState extends State<CameraPage> {
       _imageWidth = 1;
       _imageHeight = 1;
     });
+
+    _openCamera();
   }
 
   void _showMessage(String message) {
@@ -198,67 +179,43 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   @override
-  void dispose() {
-    _cameraService.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final controller = _cameraService.controller;
-
-    if (_cameraError != null) {
-      return _buildCameraError();
-    }
-
-    if (!_isCameraReady ||
-        controller == null ||
-        !controller.value.isInitialized) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+    final image = _capturedImage;
+    final result = _scanResult;
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('PDR Live Scan'),
+        title: const Text('PDR Scan'),
         centerTitle: true,
-        actions: [
-          if (_capturedImage != null)
-            IconButton(
-              onPressed: _retakePhoto,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Retake',
-            ),
-        ],
       ),
       body: Stack(
         children: [
           Positioned.fill(
-            child: _capturedImage == null
-                ? CameraPreview(controller)
-                : _buildCapturedImage(),
+            child: image == null
+                ? _buildStartScreen()
+                : _buildCapturedImage(image),
           ),
-          if (_scanResult != null) _buildResultSummary(),
-          if (_isAnalyzing)
-            const Positioned.fill(
+
+          if (result != null) _buildResultSummary(result),
+
+          if (_isOpeningCamera || _isAnalyzing)
+            Positioned.fill(
               child: ColoredBox(
-                color: Color(0x88000000),
+                color: const Color(0x99000000),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
                       Text(
-                        'Analyzing dents...',
-                        style: TextStyle(
+                        _isOpeningCamera
+                            ? 'Opening camera...'
+                            : 'Analyzing dents...',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 17,
                         ),
@@ -270,23 +227,7 @@ class _CameraPageState extends State<CameraPage> {
             ),
         ],
       ),
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _capturedImage == null
-          ? FloatingActionButton.large(
-              backgroundColor: Colors.blue,
-              onPressed: _isCapturing ? null : _capturePhoto,
-              child: _isCapturing
-                  ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                  : const Icon(
-                      Icons.camera_alt,
-                      size: 34,
-                    ),
-            )
-          : null,
-      bottomNavigationBar: _capturedImage == null
+      bottomNavigationBar: image == null
           ? null
           : SafeArea(
               child: Container(
@@ -298,7 +239,8 @@ class _CameraPageState extends State<CameraPage> {
                       child: SizedBox(
                         height: 55,
                         child: OutlinedButton.icon(
-                          onPressed: _retakePhoto,
+                          onPressed:
+                              _isAnalyzing ? null : _retakePhoto,
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retake'),
                           style: OutlinedButton.styleFrom(
@@ -318,16 +260,16 @@ class _CameraPageState extends State<CameraPage> {
                         child: ElevatedButton.icon(
                           onPressed: _isAnalyzing
                               ? null
-                              : _scanResult == null
+                              : result == null
                                   ? _analyzeImage
                                   : _openReport,
                           icon: Icon(
-                            _scanResult == null
+                            result == null
                                 ? Icons.analytics
                                 : Icons.description,
                           ),
                           label: Text(
-                            _scanResult == null
+                            result == null
                                 ? 'Analyze Image'
                                 : 'Open Report',
                             style: const TextStyle(
@@ -336,7 +278,7 @@ class _CameraPageState extends State<CameraPage> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _scanResult == null
+                            backgroundColor: result == null
                                 ? Colors.green
                                 : Colors.blue,
                             foregroundColor: Colors.white,
@@ -351,33 +293,80 @@ class _CameraPageState extends State<CameraPage> {
     );
   }
 
-  Widget _buildCapturedImage() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          fit: StackFit.expand,
+  Widget _buildStartScreen() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Image.file(
-              File(_capturedImage!.path),
-              fit: BoxFit.contain,
+            const Icon(
+              Icons.camera_alt_outlined,
+              color: Colors.blue,
+              size: 90,
             ),
-            if (_scanResult != null)
-              CustomPaint(
-                painter: DentBoxPainter(
-                  predictions: _scanResult!.predictions,
-                  originalImageWidth: _imageWidth,
-                  originalImageHeight: _imageHeight,
+            const SizedBox(height: 20),
+            const Text(
+              'Take a vehicle panel photo',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'The image will be sent to PDR AI for dent detection.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 58,
+              child: ElevatedButton.icon(
+                onPressed:
+                    _isOpeningCamera ? null : _openCamera,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text(
+                  'Start Scan',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
+            ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+    Widget _buildCapturedImage(XFile image) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.file(
+          File(image.path),
+          fit: BoxFit.contain,
+        ),
+        if (_scanResult != null)
+          CustomPaint(
+            painter: DentBoxPainter(
+              predictions: _scanResult!.predictions,
+              originalImageWidth: _imageWidth,
+              originalImageHeight: _imageHeight,
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _buildResultSummary() {
-    final result = _scanResult!;
-
+  Widget _buildResultSummary(ScanResult result) {
     final averageConfidence = result.predictions.isEmpty
         ? 0.0
         : result.predictions
@@ -388,6 +377,7 @@ class _CameraPageState extends State<CameraPage> {
     return Positioned(
       top: 16,
       left: 16,
+      right: 16,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -400,8 +390,8 @@ class _CameraPageState extends State<CameraPage> {
             color: Colors.blue,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               'Dent Count: ${result.dentCount}',
@@ -411,7 +401,6 @@ class _CameraPageState extends State<CameraPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               'Confidence: ${(averageConfidence * 100).toStringAsFixed(1)}%',
               style: const TextStyle(
@@ -420,47 +409,6 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCameraError() {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('PDR Live Scan'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.camera_alt_outlined,
-                color: Colors.redAccent,
-                size: 64,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _cameraError!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _initializeCamera,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
         ),
       ),
     );
