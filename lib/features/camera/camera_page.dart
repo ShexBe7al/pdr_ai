@@ -33,44 +33,7 @@ class _CameraPageState extends State<CameraPage> {
   Future<void> _openCamera() async {
     if (_isOpeningCamera) return;
 
-    setState(() {
-      _isOpeningCamera = true;
-      _scanResult = null;
-    });
-
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
-        imageQuality: 95,
-      );
-
-      if (image == null) {
-        return;
-      }
-
-      await _readImageSize(File(image.path));
-
-      if (!mounted) return;
-
-      setState(() {
-        _capturedImage = image;
-      });
-
-      await _analyzeImage();
-    } catch (error) {
-      if (!mounted) return;
-
-      _showMessage(
-        'Camera failed: $error',
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isOpeningCamera = false;
-        });
-      }
-    }
+    _showMessage('Button works');
   }
 
   Future<void> _readImageSize(File imageFile) async {
@@ -95,9 +58,7 @@ class _CameraPageState extends State<CameraPage> {
     }
 
     if (_apiKey.isEmpty) {
-      _showMessage(
-        'Roboflow API key is missing.',
-      );
+      _showMessage('Roboflow API key is missing.');
       return;
     }
 
@@ -126,9 +87,7 @@ class _CameraPageState extends State<CameraPage> {
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage(
-        'AI scan failed: $error',
-      );
+      _showMessage('AI scan failed: $error');
     } finally {
       if (mounted) {
         setState(() {
@@ -137,7 +96,8 @@ class _CameraPageState extends State<CameraPage> {
       }
     }
   }
-    void _openReport() {
+
+  void _openReport() {
     final image = _capturedImage;
     final result = _scanResult;
 
@@ -198,9 +158,7 @@ class _CameraPageState extends State<CameraPage> {
                 ? _buildStartScreen()
                 : _buildCapturedImage(image),
           ),
-
           if (result != null) _buildResultSummary(result),
-
           if (_isOpeningCamera || _isAnalyzing)
             Positioned.fill(
               child: ColoredBox(
@@ -216,7 +174,7 @@ class _CameraPageState extends State<CameraPage> {
                             ? 'Opening camera...'
                             : 'Analyzing dents...',
                         style: const TextStyle(
-                          color: Colors.white,
+                     color: Colors.white,
                           fontSize: 17,
                         ),
                       ),
@@ -239,8 +197,7 @@ class _CameraPageState extends State<CameraPage> {
                       child: SizedBox(
                         height: 55,
                         child: OutlinedButton.icon(
-                          onPressed:
-                              _isAnalyzing ? null : _retakePhoto,
+                          onPressed: _isAnalyzing ? null : _retakePhoto,
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retake'),
                           style: OutlinedButton.styleFrom(
@@ -278,9 +235,8 @@ class _CameraPageState extends State<CameraPage> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: result == null
-                                ? Colors.green
-                                : Colors.blue,
+                            backgroundColor:
+                                result == null ? Colors.green : Colors.blue,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -329,13 +285,12 @@ class _CameraPageState extends State<CameraPage> {
               width: double.infinity,
               height: 58,
               child: ElevatedButton.icon(
-                onPressed:
-                    _isOpeningCamera ? null : _openCamera,
+                onPressed: _isOpeningCamera ? null : _openCamera,
                 icon: const Icon(Icons.camera_alt),
                 label: const Text(
                   'Start Scan',
                   style: TextStyle(
-                    fontSize: 18,
+                         fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -346,7 +301,8 @@ class _CameraPageState extends State<CameraPage> {
       ),
     );
   }
-    Widget _buildCapturedImage(XFile image) {
+
+  Widget _buildCapturedImage(XFile image) {
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -486,7 +442,8 @@ class DentBoxPainter extends CustomPainter {
       canvas.drawRect(rect, boxPaint);
 
       final label =
-          '#${index + 1} ${(prediction.confidence * 100).toStringAsFixed(0)}%';
+          '#${index + 1} ${(prediction.confidence * 100).
+          toStringAsFixed(0)}%';
 
       final textPainter = TextPainter(
         text: TextSpan(
@@ -500,9 +457,8 @@ class DentBoxPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      final labelTop = top > textPainter.height + 8
-          ? top - textPainter.height - 8
-          : top;
+      final labelTop =
+          top > textPainter.height + 8 ? top - textPainter.height - 8 : top;
 
       final labelRect = Rect.fromLTWH(
         left,
