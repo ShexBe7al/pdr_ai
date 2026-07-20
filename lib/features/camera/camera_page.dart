@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
-import '../ai/scanner_ai.dart';
-import '../reports/report_page.dart';
+import 'report_page.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -14,481 +12,450 @@ class CameraPage extends StatefulWidget {
   State<CameraPage> createState() => _CameraPageState();
 }
 
-class _CameraPageState extends State<CameraPage> {
-  static const String _apiKey = String.fromEnvironment(
-    'ROBOFLOW_API_KEY',
-  );
+class _CameraPageState extends State<CameraPage>
+    with WidgetsBindingObserver {
+  CameraController? _cameraController;
 
-  final ImagePicker _picker = ImagePicker();
+  bool _isCameraReady = false;
+  bool _isTakingPhoto = false;
 
-  XFile? _capturedImage;
-  ScanResult? _scanResult;
+  String? _errorMessage;
+  String? _capturedImagePath;
 
-  bool _isOpeningCamera = false;
-  bool _isAnalyzing = false;
+  @override
+  void initState() {
+    super.initState();
 
-  double _imageWidth = 1;
-  double _imageHeight = 1;
+    WidgetsBinding.instance.addObserver(this);
 
-  Future<void> _openCamera() async {
-    if (_isOpeningCamera) return;
-
-    _showMessage('Button works');
+    _initializeCamera();
   }
 
-  Future<void> _readImageSize(File imageFile) async {
-    final bytes = await imageFile.readAsBytes();
-
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-
-    _imageWidth = frame.image.width.toDouble();
-    _imageHeight = frame.image.height.toDouble();
-
-    frame.image.dispose();
-    codec.dispose();
-  }
-
-  Future<void> _analyzeImage() async {
-    final image = _capturedImage;
-
-    if (image == null) {
-      _showMessage('Please take a photo first.');
-      return;
-    }
-
-    if (_apiKey.isEmpty) {
-      _showMessage('Roboflow API key is missing.');
-      return;
-    }
-
-    if (_isAnalyzing) return;
-
-    setState(() {
-      _isAnalyzing = true;
-      _scanResult = null;
-    });
-
+  Future<void> _initializeCamera() async {
     try {
-      final result = await ScannerAI.scan(
-        File(image.path),
-        _apiKey,
+      setState(() {
+        _isCameraReady = false;
+        _errorMessage = null;
+      });
+
+      final cameras = await availableCameras();
+
+      if (cameras.isEmpty) {
+        setState(() {
+          _errorMessage = 'هیچ کامێرایەک لەسەر ئەم ئامێرە نەدۆزرایەوە.';
+        });
+
+        return;
+      }
+
+      CameraDescription selectedCamera = cameras.first;
+
+      for (final camera in cameras) {
+        if (camera.lensDirection == CameraLensDirection.back) {
+          selectedCamera = camera;
+          break;
+        }
+      }
+
+      final controller = CameraController(
+        selectedCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
       );
+
+      _cameraController = controller;
+
+      await controller.initialize();
 
       if (!mounted) return;
 
       setState(() {
-        _scanResult = result;
+        _isCameraReady = true;
+        _errorMessage = null;
       });
+    } on CameraException catch (error) {
+      if (!mounted) return;
 
-      _showMessage(
-        '${result.dentCount} dent(s) detected.',
-      );
+      String message;
+
+      switch (error.code) {
+        case 'CameraAccessDenied':
+          message =
+              'مۆڵەتی کامێرا ڕەتکرایەوە.\nلە Settings مۆڵەتی Camera بۆ PDR AI چالاک بکە.';
+          break;
+
+        case 'CameraAccessDeniedWithoutPrompt':
+          message =
+              'مۆڵەتی کامێرا داخراوە.\nبڕۆ بۆ Settings > PDR AI > Camera و چالاکی بکە.';
+          break;
+
+        case 'CameraAccessRestricted':
+          message = 'بەکارهێنانی کامێرا لەسەر ئەم ئامێرە سنووردار کراوە.';
+          break;
+
+        case 'AudioAccessDenied':
+          message = 'مۆڵەتی دەنگ ڕەتکرایەوە.';
+          break;
+
+        default:
+          message = 'هەڵەی کامێرا: ${error.description ?? error.code}';
+      }
+
+      setState(() {
+        _errorMessage = message;
+        _isCameraReady = false;
+      });
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage('AI scan failed: $error');
+      setState(() {
+        _errorMessage = 'هەڵەیەک ڕوویدا:\n$error';
+        _isCameraReady = false;
+      });
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    final controller = _cameraController;
+
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        _isTakingPhoto) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isTakingPhoto = true;
+        _errorMessage = null;
+      });
+
+      final XFile photo = await controller.takePicture();
+
+      if (!mounted) return;
+
+      setState(() {
+        _capturedImagePath = photo.path;
+      });
+    } on CameraException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage =
+            'نەتوانرا وێنە بگیرێت:\n${error.description ?? error.code}';
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = 'هەڵە لە کاتی وێنەگرتن:\n$error';
+      });
     } finally {
       if (mounted) {
         setState(() {
-          _isAnalyzing = false;
+          _isTakingPhoto = false;
         });
       }
     }
   }
 
-  void _openReport() {
-    final image = _capturedImage;
-    final result = _scanResult;
+  void _retakePhoto() {
+    setState(() {
+      _capturedImagePath = null;
+      _errorMessage = null;
+    });
+  }
 
-    if (image == null || result == null) {
-      _showMessage('Analyze the image first.');
-      return;
-    }
+  void _openReportPage() {
+    final imagePath = _capturedImagePath;
 
-    Navigator.push(
-      context,
+    if (imagePath == null) return;
+
+    Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ReportPage(
-          imagePath: image.path,
-          result: result,
-          imageWidth: _imageWidth,
-          imageHeight: _imageHeight,
+        builder: (context) => ReportPage(
+          imagePath: imagePath,
         ),
       ),
     );
   }
 
-  void _retakePhoto() {
-    setState(() {
-      _capturedImage = null;
-      _scanResult = null;
-      _imageWidth = 1;
-      _imageHeight = 1;
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _cameraController;
 
-    _openCamera();
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      controller.dispose();
+
+      _cameraController = null;
+      _isCameraReady = false;
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    _cameraController?.dispose();
+
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final image = _capturedImage;
-    final result = _scanResult;
-
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF050B18),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF050B18),
         foregroundColor: Colors.white,
-        title: const Text('PDR Scan'),
+        elevation: 0,
         centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: image == null
-                ? _buildStartScreen()
-                : _buildCapturedImage(image),
+        title: const Text(
+          'PDR Camera',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
-          if (result != null) _buildResultSummary(result),
-          if (_isOpeningCamera || _isAnalyzing)
-            Positioned.fill(
-              child: ColoredBox(
-                color: const Color(0x99000000),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isOpeningCamera
-                            ? 'Opening camera...'
-                            : 'Analyzing dents...',
-                        style: const TextStyle(
-                     color: Colors.white,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-      bottomNavigationBar: image == null
-          ? null
-          : SafeArea(
-              child: Container(
-                color: Colors.black,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 55,
-                        child: OutlinedButton.icon(
-                          onPressed: _isAnalyzing ? null : _retakePhoto,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retake'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(
-                              color: Colors.white54,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: SizedBox(
-                        height: 55,
-                        child: ElevatedButton.icon(
-                          onPressed: _isAnalyzing
-                              ? null
-                              : result == null
-                                  ? _analyzeImage
-                                  : _openReport,
-                          icon: Icon(
-                            result == null
-                                ? Icons.analytics
-                                : Icons.description,
-                          ),
-                          label: Text(
-                            result == null
-                                ? 'Analyze Image'
-                                : 'Open Report',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                result == null ? Colors.green : Colors.blue,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-    );
-  }
-
-  Widget _buildStartScreen() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.camera_alt_outlined,
-              color: Colors.blue,
-              size: 90,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Take a vehicle panel photo',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'The image will be sent to PDR AI for dent detection.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              height: 58,
-              child: ElevatedButton.icon(
-                onPressed: _isOpeningCamera ? null : _openCamera,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text(
-                  'Start Scan',
-                  style: TextStyle(
-                         fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
+      body: SafeArea(
+        child: _buildBody(),
+      ),
     );
   }
 
-  Widget _buildCapturedImage(XFile image) {
-    return Stack(
-      fit: StackFit.expand,
+  Widget _buildBody() {
+    if (_errorMessage != null && !_isCameraReady) {
+      return _buildErrorView();
+    }
+
+    if (_capturedImagePath != null) {
+      return _buildCapturedImageView();
+    }
+
+    if (!_isCameraReady ||
+        _cameraController == null ||
+        !_cameraController!.value.isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return _buildCameraView();
+  }
+
+  Widget _buildCameraView() {
+    final controller = _cameraController!;
+
+    return Column(
       children: [
-        Image.file(
-          File(image.path),
-          fit: BoxFit.contain,
-        ),
-        if (_scanResult != null)
-          CustomPaint(
-            painter: DentBoxPainter(
-              predictions: _scanResult!.predictions,
-              originalImageWidth: _imageWidth,
-              originalImageHeight: _imageHeight,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                width: double.infinity,
+                color: Colors.black,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: controller.value.aspectRatio,
+                    child: CameraPreview(controller),
+                  ),
+                ),
+              ),
             ),
           ),
+        ),
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 6,
+            ),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.redAccent,
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            children: [
+              const Text(
+                'کامێرا بە ئاراستەی پەڕەی ئۆتۆمبێلەکە بگرە',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _isTakingPhoto ? null : _takePhoto,
+                child: Container(
+                  width: 78,
+                  height: 78,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(
+                      color: Colors.blueAccent,
+                      width: 5,
+                    ),
+                  ),
+                  child: _isTakingPhoto
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.camera_alt_rounded,
+                          color: Color(0xFF050B18),
+                          size: 36,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildResultSummary(ScanResult result) {
-    final averageConfidence = result.predictions.isEmpty
-        ? 0.0
-        : result.predictions
-                .map((prediction) => prediction.confidence)
-                .reduce((a, b) => a + b) /
-            result.predictions.length;
+  Widget _buildCapturedImageView() {
+    final imagePath = _capturedImagePath!;
 
-    return Positioned(
-      top: 16,
-      left: 16,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xDD111827),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.blue,
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                width: double.infinity,
+                color: Colors.black,
+                child: Image.file(
+                  File(imagePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Text(
+                        'وێنەکە نەتوانرا پیشان بدرێت',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Dent Count: ${result.dentCount}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _retakePhoto,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('دووبارە وێنە بگرە'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(
+                      color: Colors.white38,
+                    ),
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            Text(
-              'Confidence: ${(averageConfidence * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 15,
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _openReportPage,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('بەردەوام بە'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111827),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.redAccent.withValues(alpha: 0.5),
             ),
-          ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.no_photography_outlined,
+                color: Colors.redAccent,
+                size: 64,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                _errorMessage ?? 'کامێرا کار ناکات.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 22),
+              ElevatedButton.icon(
+                onPressed: _initializeCamera,
+                icon: const Icon(Icons.refresh),
+                label: const Text('دووبارە هەوڵ بدە'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-}
-
-class DentBoxPainter extends CustomPainter {
-  const DentBoxPainter({
-    required this.predictions,
-    required this.originalImageWidth,
-    required this.originalImageHeight,
-  });
-
-  final List<Prediction> predictions;
-  final double originalImageWidth;
-  final double originalImageHeight;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (originalImageWidth <= 1 || originalImageHeight <= 1) {
-      return;
-    }
-
-    final imageRatio = originalImageWidth / originalImageHeight;
-    final canvasRatio = size.width / size.height;
-
-    double displayedWidth;
-    double displayedHeight;
-    double offsetX;
-    double offsetY;
-
-    if (canvasRatio > imageRatio) {
-      displayedHeight = size.height;
-      displayedWidth = displayedHeight * imageRatio;
-      offsetX = (size.width - displayedWidth) / 2;
-      offsetY = 0;
-    } else {
-      displayedWidth = size.width;
-      displayedHeight = displayedWidth / imageRatio;
-      offsetX = 0;
-      offsetY = (size.height - displayedHeight) / 2;
-    }
-
-    final scaleX = displayedWidth / originalImageWidth;
-    final scaleY = displayedHeight / originalImageHeight;
-
-    final boxPaint = Paint()
-      ..color = Colors.greenAccent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-
-    final labelBackgroundPaint = Paint()
-      ..color = const Color(0xDD000000)
-      ..style = PaintingStyle.fill;
-
-    for (int index = 0; index < predictions.length; index++) {
-      final prediction = predictions[index];
-
-      final left =
-          offsetX + (prediction.x - prediction.width / 2) * scaleX;
-      final top =
-          offsetY + (prediction.y - prediction.height / 2) * scaleY;
-      final right =
-          offsetX + (prediction.x + prediction.width / 2) * scaleX;
-      final bottom =
-          offsetY + (prediction.y + prediction.height / 2) * scaleY;
-
-      final rect = Rect.fromLTRB(
-        left,
-        top,
-        right,
-        bottom,
-      );
-
-      canvas.drawRect(rect, boxPaint);
-
-      final label =
-          '#${index + 1} ${(prediction.confidence * 100).
-          toStringAsFixed(0)}%';
-
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      final labelTop =
-          top > textPainter.height + 8 ? top - textPainter.height - 8 : top;
-
-      final labelRect = Rect.fromLTWH(
-        left,
-        labelTop,
-        textPainter.width + 12,
-        textPainter.height + 6,
-      );
-
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          labelRect,
-          const Radius.circular(5),
-        ),
-        labelBackgroundPaint,
-      );
-
-      textPainter.paint(
-        canvas,
-        Offset(
-          left + 6,
-          labelTop + 3,
-        ),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DentBoxPainter oldDelegate) {
-    return oldDelegate.predictions != predictions ||
-        oldDelegate.originalImageWidth != originalImageWidth ||
-        oldDelegate.originalImageHeight != originalImageHeight;
   }
 }
