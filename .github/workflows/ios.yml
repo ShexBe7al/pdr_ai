@@ -25,13 +25,12 @@ jobs:
       - name: Build iOS (No Codesign)
         run: flutter build ios --release --no-codesign
 
-      - name: Create IPA
+            - name: Create IPA
         run: |
+          rm -rf Payload Runner.ipa
           mkdir Payload
-          cp -R build/ios/iphoneos/Runner.app Payload
-          cd Payload
-          zip -r ../Runner.ipa .
-          cd ..
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r Runner.ipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
