@@ -23,8 +23,7 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS (No Codesign)
-        run: flutter build ios --release --no-codesign
-
+       run: flutter build ios --release --no-codesign --dart-define=ROBOFLOW_API_KEY=${{ secrets.ROBOFLOW_API_KEY }}
             - name: Create IPA
         run: |
           rm -rf Payload Runner.ipa
